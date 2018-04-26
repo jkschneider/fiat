@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.util.ArrayIterator;
 import com.google.common.collect.ArrayTable;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.netflix.spinnaker.cats.redis.JedisSource;
 import com.netflix.spinnaker.fiat.config.UnrestrictedResourceConfig;
 import com.netflix.spinnaker.fiat.model.UserPermission;
 import com.netflix.spinnaker.fiat.model.resources.Resource;
@@ -36,8 +35,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Response;
+import redis.clients.util.Pool;
 
 import java.util.HashMap;
 import java.util.List;
@@ -84,7 +85,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Autowired
   @Setter
-  private JedisSource jedisSource;
+  private Pool<Jedis> jedisPool;
 
   @Override
   public RedisPermissionsRepository put(@NonNull UserPermission permission) {
@@ -103,7 +104,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
           }
         });
 
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       Pipeline deleteOldValuesPipeline = jedis.pipelined();
       Pipeline insertNewValuesPipeline = jedis.pipelined();
 
@@ -138,7 +139,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Override
   public Optional<UserPermission> get(@NonNull String id) {
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       RawUserPermission userResponseMap = new RawUserPermission();
       RawUserPermission unrestrictedResponseMap = new RawUserPermission();
 
@@ -202,7 +203,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
       return new HashMap<>();
     }
 
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       Pipeline p = jedis.pipelined();
       List<Response<Set<String>>> responses = anyRoles
           .stream()
@@ -255,7 +256,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   private Table<String, ResourceType, Response<Map<String, String>>> getAllFromRedis() {
     Set<String> allUserIds;
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       allUserIds = jedis.smembers(allUsersKey());
     } catch (Exception e) {
       log.error("Storage exception reading all entries.", e);
@@ -269,7 +270,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
     if (userIds.size() == 0) {
       return HashBasedTable.create();
     }
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       Table<String, ResourceType, Response<Map<String, String>>> responseTable =
           ArrayTable.create(userIds, new ArrayIterator<>(ResourceType.values()));
 
@@ -289,7 +290,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Override
   public void remove(@NonNull String id) {
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       Map<String, String> userRolesById = jedis.hgetAll(userKey(id, ResourceType.ROLE));
 
       Pipeline p = jedis.pipelined();
@@ -310,7 +311,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
   }
 
   private Set<String> getAllAdmins() {
-    try (Jedis jedis = jedisSource.getJedis()) {
+    try (Jedis jedis = jedisPool.getResource()) {
       return jedis.smembers(adminKey());
     }
   }

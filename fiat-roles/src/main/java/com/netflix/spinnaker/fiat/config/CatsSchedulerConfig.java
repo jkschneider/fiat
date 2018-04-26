@@ -16,9 +16,12 @@
 
 package com.netflix.spinnaker.fiat.config;
 
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.PreDestroy;
+
 import com.netflix.spinnaker.cats.agent.Agent;
 import com.netflix.spinnaker.cats.agent.ExecutionInstrumentation;
-import com.netflix.spinnaker.cats.redis.JedisSource;
 import com.netflix.spinnaker.cats.redis.cluster.AgentIntervalProvider;
 import com.netflix.spinnaker.cats.redis.cluster.ClusteredAgentScheduler;
 import com.netflix.spinnaker.cats.redis.cluster.DefaultAgentIntervalProvider;
@@ -27,19 +30,15 @@ import com.netflix.spinnaker.cats.redis.cluster.DefaultNodeStatusProvider;
 import com.netflix.spinnaker.cats.redis.cluster.NodeIdentity;
 import com.netflix.spinnaker.cats.redis.cluster.NodeStatusProvider;
 import com.netflix.spinnaker.fiat.roles.UserRolesSyncer;
+import com.netflix.spinnaker.kork.jedis.RedisClientDelegate;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PreDestroy;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Configuration
@@ -75,12 +74,12 @@ public class CatsSchedulerConfig {
   }
 
   @Bean
-  ClusteredAgentScheduler clusteredAgentScheduler(JedisSource jedisSource,
+  ClusteredAgentScheduler clusteredAgentScheduler(RedisClientDelegate redisClient,
                                                   NodeIdentity nodeIdentity,
                                                   AgentIntervalProvider intervalProvider,
                                                   NodeStatusProvider nodeStatusProvider,
                                                   ExecutionInstrumentation executionInstrumentation) {
-    scheduler = new ClusteredAgentScheduler(jedisSource, nodeIdentity, intervalProvider, nodeStatusProvider);
+    scheduler = new ClusteredAgentScheduler(redisClient, nodeIdentity, intervalProvider, nodeStatusProvider, ".*");
     scheduler.schedule(userRolesSyncer, userRolesSyncer.getAgentExecution(null), executionInstrumentation);
     return scheduler;
   }

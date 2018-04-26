@@ -71,11 +71,15 @@ allprojects {
   }
 }
 
-subprojects { project ->
+subprojects {
   dependencies {
     spinnaker.group('test')
 
     testCompile spinnaker.dependency('groovy')
+  }
+
+  repositories {
+    mavenLocal()
   }
 }
 

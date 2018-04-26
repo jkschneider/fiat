@@ -1,12 +1,19 @@
 package com.netflix.spinnaker.fiat.config;
 
-import com.netflix.spinnaker.cats.redis.JedisPoolSource;
-import com.netflix.spinnaker.cats.redis.JedisSource;
+import java.lang.reflect.Field;
+import java.net.URI;
+
+import com.netflix.spinnaker.kork.jedis.JedisClientDelegate;
+import com.netflix.spinnaker.kork.jedis.RedisClientDelegate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Protocol;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -14,12 +21,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.Protocol;
-
-import java.lang.reflect.Field;
-import java.net.URI;
 
 @Slf4j
 @Configuration
@@ -27,8 +28,8 @@ import java.net.URI;
 public class RedisConfig {
 
   @Bean
-  public JedisSource jedisSource(JedisPool jedisPool) {
-    return new JedisPoolSource(jedisPool);
+  public RedisClientDelegate redisSource(JedisPool jedisPool) {
+    return new JedisClientDelegate(jedisPool);
   }
 
   @Bean

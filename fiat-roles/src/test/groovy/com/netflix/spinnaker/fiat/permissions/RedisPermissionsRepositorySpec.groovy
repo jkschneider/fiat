@@ -18,7 +18,6 @@ package com.netflix.spinnaker.fiat.permissions
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.netflix.spinnaker.cats.redis.JedisSource
 import com.netflix.spinnaker.fiat.config.UnrestrictedResourceConfig
 import com.netflix.spinnaker.fiat.model.UserPermission
 import com.netflix.spinnaker.fiat.model.resources.Account
@@ -58,16 +57,10 @@ class RedisPermissionsRepositorySpec extends Specification {
   }
 
   def setup() {
-    JedisSource js = new JedisSource() {
-      @Override
-      Jedis getJedis() {
-        return embeddedRedis.jedis
-      }
-    }
     repo = new RedisPermissionsRepository()
         .setPrefix(prefix)
         .setObjectMapper(objectMapper)
-        .setJedisSource(js)
+        .setJedisPool(embeddedRedis.pool)
   }
 
   def cleanup() {

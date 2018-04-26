@@ -18,7 +18,6 @@ package com.netflix.spinnaker.fiat.roles
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.netflix.spinnaker.cats.redis.JedisSource
 import com.netflix.spinnaker.fiat.config.ResourceProvidersHealthIndicator
 import com.netflix.spinnaker.fiat.config.UnrestrictedResourceConfig
 import com.netflix.spinnaker.fiat.model.UserPermission
@@ -60,15 +59,9 @@ class UserRolesSyncerSpec extends Specification {
   }
 
   def setup() {
-    JedisSource js = new JedisSource() {
-      @Override
-      Jedis getJedis() {
-        return embeddedRedis.jedis
-      }
-    }
     repo = new RedisPermissionsRepository()
         .setObjectMapper(objectMapper)
-        .setJedisSource(js)
+        .setJedisPool(embeddedRedis.pool)
   }
 
   def cleanup() {
